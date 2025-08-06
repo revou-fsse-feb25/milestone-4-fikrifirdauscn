@@ -1,28 +1,29 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 
 async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 10; 
+  const saltRounds = 10;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   return hashedPassword;
 }
 
 async function main() {
   
-  const customer1 = await prisma.customer.create({
+  const user1 = await prisma.user.create({
     data: {
       name: 'John Doe',
       username: 'johndoe123',
       email: 'johndoe@example.com',
-      password: await hashPassword('securepassword123'), 
+      password: await hashPassword('securepassword123'),
       phone: '1234567890',
     },
   });
 
-  const customer2 = await prisma.customer.create({
+  
+  const user2 = await prisma.user.create({
     data: {
       name: 'Jane Smith',
       username: 'janesmith456',
@@ -38,21 +39,21 @@ async function main() {
       accountNumber: '1234567890',
       balance: 5000.0,
       status: 'ACTIVE',
-      customerId: customer1.id,
+      userId: user1.id,  // Menggunakan userId, bukan customerId
     },
   });
 
-  
+  // Membuat rekening untuk user kedua
   const account2 = await prisma.account.create({
     data: {
       accountNumber: '9876543210',
       balance: 10000.0,
       status: 'ACTIVE',
-      customerId: customer2.id,
+      userId: user2.id,  // Menggunakan userId, bukan customerId
     },
   });
 
-  
+  // Membuat transaksi untuk akun pertama (user1)
   await prisma.transaction.create({
     data: {
       type: 'DEPOSIT',
@@ -63,7 +64,7 @@ async function main() {
     },
   });
 
-  
+  // Membuat transaksi untuk akun kedua (user2)
   await prisma.transaction.create({
     data: {
       type: 'WITHDRAWAL',
@@ -79,9 +80,9 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Error seeding the database:', e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
+  .finally(() => {
+    prisma.$disconnect();
   });

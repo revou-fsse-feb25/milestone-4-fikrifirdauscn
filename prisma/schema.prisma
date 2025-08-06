@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -14,38 +13,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Customer {
-  id Int @id @default(autoincrement())
-  name String
-  username String @unique
-  email String @unique
-  password String
-  phone String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  accounts Account []
+model User {
+  id        Int        @id @default(autoincrement())
+  name      String
+  username  String     @unique
+  email     String     @unique
+  password  String
+  phone     String
+  role      UserRole   @default(USER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  accounts  Account[]
 }
 
 model Account {
-  id Int @id @default(autoincrement())
-  accountNumber String @unique
-  balance Float @default(0.0)
-  status AccountStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  customerId Int
-  customer Customer @relation(fields: [customerId], references: [id])
+  id          Int         @id @default(autoincrement())
+  accountNumber String     @unique
+  balance     Float       @default(0.0)
+  status      AccountStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userId      Int         @default(1) 
+  user        User        @relation(fields: [userId], references: [id])
   transactions Transaction[]
 }
 
 model Transaction {
-  id Int @id @default(autoincrement())
-  type TransactionType
-  amount Float
-  transactionDate DateTime @default(now())
-  description String?
-  accountId Int
-  account Account @relation(fields: [accountId], references: [id])
+  id              Int         @id @default(autoincrement())
+  type            TransactionType
+  amount          Float
+  transactionDate DateTime    @default(now())
+  description     String?
+  accountId       Int
+  account         Account     @relation(fields: [accountId], references: [id])
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum AccountStatus {
