@@ -14,14 +14,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User (
-  id Int @id @default{autoincrement{}}
+model Customer {
+  id Int @id @default(autoincrement())
+  name String
   username String @unique
+  email String @unique
   password String
-)
+  phone String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  accounts Account []
+}
 
-model Post {
-  id Int @id @default{autoincrement{}}
-  tittle String
-  content String
+model Account {
+  id Int @id @default(autoincrement())
+  accountNumber String @unique
+  balance Float @default(0.0)
+  status AccountStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  customerId Int
+  customer Customer @relation(fields: [customerId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id Int @id @default(autoincrement())
+  type TransactionType
+  amount Float
+  transactionDate DateTime @default(now())
+  description String?
+  accountId Int
+  account Account @relation(fields: [accountId], references: [id])
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
 }
