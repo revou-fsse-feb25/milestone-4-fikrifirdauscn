@@ -1,9 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,38 +9,58 @@ datasource db {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  name      String
-  username  String     @unique
-  email     String     @unique
-  password  String
-  phone     String
-  role      UserRole   @default(USER)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  accounts  Account[]
+  id         Int        @id @default(autoincrement())
+  email      String     @unique
+  password   String
+  name       String
+  phone      String?
+  role       UserRole   @default(USER)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  accounts        Account[]
+  transactions    Transaction[] @relation("performedBy")
 }
 
 model Account {
-  id          Int         @id @default(autoincrement())
-  accountNumber String     @unique
-  balance     Float       @default(0.0)
-  status      AccountStatus @default(ACTIVE)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  userId      Int         @default(1) 
-  user        User        @relation(fields: [userId], references: [id])
-  transactions Transaction[]
+  id            Int           @id @default(autoincrement())
+  accountNumber String        @unique
+  balance       Decimal       @default(0.00) @db.Decimal(14, 2)
+  status        AccountStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  userId  Int
+  user    User          @relation(fields: [userId], references: [id])
+
+  // relasi transaksi
+  transactionsFrom Transaction[] @relation("fromAccount")
+  transactionsTo   Transaction[] @relation("toAccount")
+
+  @@index([userId])
 }
 
 model Transaction {
-  id              Int         @id @default(autoincrement())
-  type            TransactionType
-  amount          Float
-  transactionDate DateTime    @default(now())
-  description     String?
-  accountId       Int
-  account         Account     @relation(fields: [accountId], references: [id])
+  id            Int              @id @default(autoincrement())
+  type          TransactionType
+  amount        Decimal           @db.Decimal(14, 2)
+  description   String?
+  createdAt     DateTime          @default(now())
+
+  // Deposit/Withdraw/Transfer
+  fromAccountId Int?
+  toAccountId   Int?
+
+  fromAccount   Account? @relation("fromAccount", fields: [fromAccountId], references: [id])
+  toAccount     Account? @relation("toAccount",   fields: [toAccountId], references: [id])
+
+  performedById Int
+  performedBy   User     @relation("performedBy", fields: [performedById], references: [id])
+
+  @@index([createdAt])
+  @@index([performedById])
+  @@index([fromAccountId])
+  @@index([toAccountId])
 }
 
 enum UserRole {
