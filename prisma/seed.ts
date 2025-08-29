@@ -5,7 +5,12 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // users
+  console.log('🌱 Seeding start...');
+
+  // Cek koneksi cepat
+  await prisma.$queryRaw`SELECT 1`;
+
+  // Users
   const [john, jane] = await Promise.all([
     prisma.user.upsert({
       where: { email: 'john@example.com' },
@@ -27,7 +32,7 @@ async function main() {
     }),
   ]);
 
-  // accounts
+  // Accounts
   const [accJohn, accJane] = await Promise.all([
     prisma.account.upsert({
       where: { accountNumber: '9000000010' },
@@ -35,7 +40,7 @@ async function main() {
       create: {
         accountNumber: '9000000010',
         userId: john.id,
-        balance: 5000, // Decimal akan tersimpan ke NUMERIC(14,2)
+        balance: 5000,
       },
     }),
     prisma.account.upsert({
@@ -49,7 +54,7 @@ async function main() {
     }),
   ]);
 
-  // transactions
+  // Transactions
   await prisma.transaction.createMany({
     data: [
       {
@@ -70,15 +75,24 @@ async function main() {
         createdAt: new Date(),
       },
     ],
+    skipDuplicates: true,
   });
+
+  // Ringkasan
+  const [u, a, t] = await Promise.all([
+    prisma.user.count(),
+    prisma.account.count(),
+    prisma.transaction.count(),
+  ]);
+  console.log(`✅ Seeding done. Users=${u}, Accounts=${a}, Transactions=${t}`);
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
+  .catch((e) => {
+    console.error('❌ Seeding failed with error:');
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
