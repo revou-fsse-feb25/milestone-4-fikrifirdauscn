@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -33,7 +33,7 @@ model Account {
   userId  Int
   user    User          @relation(fields: [userId], references: [id])
 
-  // relasi transaksi
+  
   transactionsFrom Transaction[] @relation("fromAccount")
   transactionsTo   Transaction[] @relation("toAccount")
 
@@ -47,7 +47,7 @@ model Transaction {
   description   String?
   createdAt     DateTime          @default(now())
 
-  // Deposit/Withdraw/Transfer
+  
   fromAccountId Int?
   toAccountId   Int?
 

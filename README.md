@@ -126,7 +126,7 @@ npm run seed
 
 - Development
 npm run start:dev
-# https://milestone-4-fikrifirdauscn-production.up.railway.app/
+ https://milestone-4-fikrifirdauscn-production.up.railway.app/
 
 - Production (local)
 npm run build

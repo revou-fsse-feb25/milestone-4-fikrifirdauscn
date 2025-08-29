@@ -1,4 +1,3 @@
-// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -7,10 +6,10 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding start...');
 
-  // Cek koneksi cepat
+  
   await prisma.$queryRaw`SELECT 1`;
 
-  // Users
+  
   const [john, jane] = await Promise.all([
     prisma.user.upsert({
       where: { email: 'john@example.com' },
@@ -32,7 +31,7 @@ async function main() {
     }),
   ]);
 
-  // Accounts
+  
   const [accJohn, accJane] = await Promise.all([
     prisma.account.upsert({
       where: { accountNumber: '9000000010' },
@@ -54,7 +53,7 @@ async function main() {
     }),
   ]);
 
-  // Transactions
+  
   await prisma.transaction.createMany({
     data: [
       {
@@ -78,7 +77,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Ringkasan
+  
   const [u, a, t] = await Promise.all([
     prisma.user.count(),
     prisma.account.count(),

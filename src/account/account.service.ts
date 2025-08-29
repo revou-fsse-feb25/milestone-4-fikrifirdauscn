@@ -8,7 +8,7 @@ export class AccountsService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: number, dto: CreateAccountDto) {
-    // unique accountNumber dijaga oleh constraint, tapi kita kasih pesan ramah
+    
     const exists = await this.prisma.account.findUnique({ where: { accountNumber: dto.accountNumber } });
     if (exists) throw new BadRequestException('Account number already exists');
 
