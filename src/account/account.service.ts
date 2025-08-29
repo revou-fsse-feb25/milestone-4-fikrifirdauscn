@@ -1,50 +1,46 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 
-function randAccNo() {
-  return '9' + Math.floor(100000000 + Math.random() * 900000000).toString(); // 10 digits
-}
-
 @Injectable()
-export class AccountService {
+export class AccountsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: number, _dto: CreateAccountDto) {
+  async create(userId: number, dto: CreateAccountDto) {
+    // unique accountNumber dijaga oleh constraint, tapi kita kasih pesan ramah
+    const exists = await this.prisma.account.findUnique({ where: { accountNumber: dto.accountNumber } });
+    if (exists) throw new BadRequestException('Account number already exists');
+
     return this.prisma.account.create({
-      data: { userId, accountNumber: randAccNo() },
-      select: { id: true, accountNumber: true, balance: true, status: true },
+      data: { accountNumber: dto.accountNumber, userId, balance: dto.balance ?? 0 },
     });
   }
 
-  async findAllMine(userId: number) {
-    return this.prisma.account.findMany({
-      where: { userId },
-      select: { id: true, accountNumber: true, balance: true, status: true },
-      orderBy: { id: 'asc' },
-    });
+  async findMine(userId: number) {
+    return this.prisma.account.findMany({ where: { userId } });
   }
 
-  async updateMine(userId: number, id: number, dto: UpdateAccountDto) {
+  async findByIdOrThrow(id: number) {
     const acc = await this.prisma.account.findUnique({ where: { id } });
     if (!acc) throw new NotFoundException('Account not found');
-    if (acc.userId !== userId) throw new ForbiddenException();
-    return this.prisma.account.update({
-      where: { id },
-      data: dto,
-      select: { id: true, accountNumber: true, balance: true, status: true },
-    });
+    return acc;
   }
 
-  async removeMine(userId: number, id: number) {
-    const acc = await this.prisma.account.findUnique({ where: { id } });
-    if (!acc) throw new NotFoundException('Account not found');
+  async ensureOwner(accId: number, userId: number) {
+    const acc = await this.findByIdOrThrow(accId);
     if (acc.userId !== userId) throw new ForbiddenException();
-    return this.prisma.account.update({
-      where: { id },
-      data: { status: 'CLOSED' },
-      select: { id: true, status: true },
-    });
+    return acc;
+  }
+
+  async update(id: number, userId: number, dto: UpdateAccountDto) {
+    await this.ensureOwner(id, userId);
+    return this.prisma.account.update({ where: { id }, data: dto });
+  }
+
+  async remove(id: number, userId: number) {
+    await this.ensureOwner(id, userId);
+    await this.prisma.account.delete({ where: { id } });
+    return { message: 'Account deleted' };
   }
 }

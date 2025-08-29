@@ -1,98 +1,246 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# RevoBank API (NestJS + Prisma + PostgreSQL)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A small banking-style API for learning purposes:
+- **Auth** (JWT)
+- **Accounts** (CRUD + strict ownership)
+- **Transactions** (deposit, withdraw, transfer)
+- **Auto API docs** via Swagger at `/docs`
+- **Basic tests** with Jest
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Table of Contents
+1. [Architecture (Quick)](#architecture-quick)
+2. [Tech Stack & Versions](#tech-stack--versions)
+3. [Project Structure](#project-structure)
+4. [Requirements](#requirements)
+5. [Environment Variables](#environment-variables)
+6. [Local Database Setup](#local-database-setup)
+7. [Run (Dev/Prod Local)](#run-devprod-local)
+8. [API Documentation (Swagger)](#api-documentation-swagger)
+9. [Auth Flow (Quick)](#auth-flow-quick)
+10. [Endpoints & Sample Payloads](#endpoints--sample-payloads)
+11. [Testing (Jest)](#testing-jest)
+12. [Deploy to Railway](#deploy-to-railway)
+13. [Connect with DBeaver](#connect-with-dbeaver)
+14. [Security & Good Practices](#security--good-practices)
+15. [Prisma 7 Note](#prisma-7-note)
+16. [License](#license)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Architecture (Quick)
 
-```bash
-$ npm install
-```
+- **NestJS** (modules, DI) for controllers/services.
+- **Prisma** ORM for PostgreSQL access.
+- **JWT** for authentication.
+- **class-validator** for input validation.
+- **Swagger** for auto docs.
+- **Jest** for unit tests.
 
-## Compile and run the project
+**ERD (simplified)**
 
-```bash
-# development
-$ npm run start
+User (1) ───< Account (M)
 
-# watch mode
-$ npm run start:dev
+Account (1) ───< Transaction (M) >─── (1) Account
+^ performedById -> User
 
-# production mode
-$ npm run start:prod
-```
 
-## Run tests
+Key columns:
+- `User`: `id`, `email` (UNIQUE), `name`, `password(bcrypt)`, `createdAt`, `updatedAt`
+- `Account`: `id`, `accountNumber` (UNIQUE), `balance` (DECIMAL(14,2)), `userId`
+- `Transaction`: `id`, `type` ('DEPOSIT' | 'WITHDRAW' | 'TRANSFER'), `amount`, `fromAccountId?`, `toAccountId?`, `performedById`, `createdAt`
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+## Tech Stack & Versions
+- Node.js **≥ 18.18**
+- NestJS 11
+- Prisma 6
+- PostgreSQL (local or managed / Railway)
+- Jest 29
 
-# test coverage
-$ npm run test:cov
-```
+---
 
-## Deployment
+## Project Structure
 
-When yu're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+src/
+auth/
+auth.controller.ts
+auth.service.ts
+jwt.strategy.ts
+jwt-auth.guard.ts
+common/
+decorators/current-user.decorator.ts
+accounts/
+accounts.controller.ts
+accounts.service.ts
+dto/
+create-account.dto.ts
+update-account.dto.ts
+transactions/
+transactions.controller.ts
+transactions.service.ts
+dto/
+deposit-withdraw.dto.ts
+transfer.dto.ts
+prisma/
+prisma.service.ts
+app.module.ts
+main.ts
+prisma/
+schema.prisma
+seed.ts
+migrations/
+test/
+auth.service.spec.ts
+transactions.service.spec.ts
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+---
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+## Requirements
+- Node.js **≥ 18.18**
+- PostgreSQL (local Docker or any instance; Railway recommended for quick deploy)
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## Environment Variables
 
-Check out a few resources that may come in handy when working with NestJS:
+Create a `.env` file (for **local**):
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```env
+# Local PostgreSQL
+DATABASE_URL="postgresql://postgres:ezPymchCBGDLVMiJiomJusgUChsrzqHm@yamabiko.proxy.rlwy.net:28348/railway"
 
-## Support
+# JWT
+JWT_SECRET="fbfd73c97a9dc7a42ab03ce7aa3a8a79"
+JWT_EXPIRES_IN="1d"
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Local Database Setup
 
-## Stay in touch
+npm install
+npx prisma generate
+npx prisma migrate dev -n "init"   # creates & applies migrations to your local DB
+npm run seed 
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Run (Dev/Prod Local)
+
+- Development
+npm run start:dev
+# https://milestone-4-fikrifirdauscn-production.up.railway.app/
+
+- Production (local)
+npm run build
+npm run start:prod
+
+- Useful scripts
+npm run migrate:dev        # create & apply dev migrations
+npm run migrate:deploy     # apply migrations to prod/remote DB (e.g., Railway)
+npm run db:push            # dev-only: push schema quickly (no migration files)
+npm run seed               # prisma db seed
+npm test                   # run tests
+
+## API Documentation (Swagger)
+
+Once the app is running:
+Open: /docs (e.g., https://milestone-4-fikrifirdauscn-production.up.railway.app/docs)
+Click Authorize → paste Bearer <access_token>
+Try endpoints: Auth, Accounts, Transactions
+
+## Auth Flow (Quick)
+
+1. POST /auth/register → create user
+2. POST /auth/login → get access_token
+3. Use token in Swagger Authorize or set Authorization: Bearer <token>
+4. Access protected endpoints (accounts/transactions)
+
+## Endpoints & Sample Payloads
+
+A. Auth
+  - POST /auth/register
+  { "name": "John Doe", "email": "john@example.com", "password": "password123" }
+  - POST /auth/login
+  { "email": "john@example.com", "password": "password123" }
+  Response
+  { "access_token": "..." }
+  - GET /auth/me (JWT)
+B. Accounts (JWT; only your own resources)
+  - POST /accounts
+  { "accountNumber": "9000000010", "balance": 0 }
+  - GET /accounts – list my accounts
+  - GET /accounts/:id – get one of my accounts
+  - PATCH /accounts/:id
+  { "accountNumber": "9000000099" }
+  - DELETE /accounts/:id
+C. Transactions (JWT)
+  - POST /transactions/deposit
+  { "accountId": 1, "amount": 1000 }
+  - POST /transactions/withdraw
+  { "accountId": 1, "amount": 500 }
+  - If insufficient funds → 400 Bad Request
+  { "message": "Insufficient balance" }
+  - POST /transactions/transfer
+  { "fromAccountId": 1, "toAccountId": 2, "amount": 250 }
+  - GET /transactions/me – list transactions involving my accounts
+
+## Testing (Jest)
+
+npm test
+
+Included tests:
+Auth: hashes password on register; login fails for wrong password.
+Transactions: deposit increases balance; withdraw throws if insufficient balance.
+Tests use simple mocks for PrismaService/JwtService.
+
+## Deploy to Railway
+
+1) Create project
+Add PostgreSQL plugin in Railway.
+Add Backend Service (connect your GitHub repo).
+
+2) Variables (Backend Service)
+DATABASE_URL → from Railway PostgreSQL → append ?sslmode=require
+
+postgresql://USER:PASSWORD@HOST.railway.app:PORT/railway?sslmode=require
+
+JWT_SECRET → strong value
+JWT_EXPIRES_IN → e.g., 1d
+
+3) Build & Start
+Build Command: npm run build
+Start Command: npm run start:migrate
+This runs prisma migrate deploy before starting NestJS.
+
+4) First-time migrations & seed
+
+npx prisma migrate deploy
+npx prisma db seed
+
+5) Verify
+Open your Railway URL → /docs
+Register → Login → Authorize → try a few endpoints
+
+## Connect with DBeaver
+
+New Connection → PostgreSQL
+Host: HOST.railway.app
+Port: <PORT from Railway>
+Database: railway
+User / Password: from Railway
+SSL: enable Use SSL → set SSL mode: require
+Test connection → Finish
+Expand Schemas → public → see User / Account / Transaction tables
+
+## Security & Good Practices
+- Ownership checks on all private resources.
+- Hash passwords with bcrypt.
+- JWT with strong JWT_SECRET; rotate if needed.
+- Validate input using class-validator DTOs.
+- Consistent HTTP codes: 400/401/403/404 for invalid/unauthorized cases.
+- Production: use migrate deploy (avoid db push in prod).
+- Consider rate limiting (@nestjs/throttler) & pagination for list endpoints.
 
 ## License
+> Built by **fikrifirdauscn**
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+

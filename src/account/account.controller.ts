@@ -1,39 +1,45 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
-import { AccountService } from './account.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/user.decorator';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { CurrentUser, JwtUser } from 'src/common/decorators/current-user.decorator';
+import { AccountsService } from './account.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('accounts')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('accounts')
-export class AccountController {
-  constructor(private readonly service: AccountService) {}
+export class AccountsController {
+  constructor(private service: AccountsService) {}
 
   @Post()
-  create(@CurrentUser() u: { sub: number }, @Body() dto: CreateAccountDto) {
-    return this.service.create(u.sub, dto);
+  @ApiOkResponse({ description: 'Create account' })
+  create(@CurrentUser() user: JwtUser, @Body() dto: CreateAccountDto) {
+    return this.service.create(user.id, dto);
   }
 
   @Get()
-  listMine(@CurrentUser() u: { sub: number }) {
-    return this.service.findAllMine(u.sub);
+  @ApiOkResponse({ description: 'List my accounts' })
+  mine(@CurrentUser() user: JwtUser) {
+    return this.service.findMine(user.id);
+  }
+
+  @Get(':id')
+  @ApiOkResponse({ description: 'Get one of my accounts' })
+  async getOne(@CurrentUser() user: JwtUser, @Param('id', ParseIntPipe) id: number) {
+    // ensureOwner will throw if bukan milik user
+    await this.service.ensureOwner(id, user.id);
+    return this.service.findByIdOrThrow(id);
   }
 
   @Patch(':id')
-  update(
-    @CurrentUser() u: { sub: number },
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateAccountDto,
-  ) {
-    return this.service.updateMine(u.sub, id, dto);
+  update(@CurrentUser() user: JwtUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateAccountDto) {
+    return this.service.update(id, user.id, dto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() u: { sub: number }, @Param('id', ParseIntPipe) id: number) {
-    return this.service.removeMine(u.sub, id);
+  remove(@CurrentUser() user: JwtUser, @Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(id, user.id);
   }
 }
