@@ -108,7 +108,6 @@ transactions.service.spec.ts
 
 Create a `.env` file (for **local**):
 
-```env
 # Local PostgreSQL
 DATABASE_URL="postgresql://postgres:ezPymchCBGDLVMiJiomJusgUChsrzqHm@yamabiko.proxy.rlwy.net:28348/railway"
 
