@@ -1,88 +1,84 @@
+// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-
-async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 10;
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-  return hashedPassword;
-}
-
 async function main() {
-  
-  const user1 = await prisma.user.create({
-    data: {
-      name: 'John Doe',
-      username: 'johndoe123',
-      email: 'johndoe@example.com',
-      password: await hashPassword('securepassword123'),
-      phone: '1234567890',
-    },
-  });
+  // users
+  const [john, jane] = await Promise.all([
+    prisma.user.upsert({
+      where: { email: 'john@example.com' },
+      update: {},
+      create: {
+        email: 'john@example.com',
+        name: 'John Doe',
+        password: await bcrypt.hash('password123', 10),
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: 'jane@example.com' },
+      update: {},
+      create: {
+        email: 'jane@example.com',
+        name: 'Jane Smith',
+        password: await bcrypt.hash('password123', 10),
+      },
+    }),
+  ]);
 
-  
-  const user2 = await prisma.user.create({
-    data: {
-      name: 'Jane Smith',
-      username: 'janesmith456',
-      email: 'janesmith@example.com',
-      password: await hashPassword('anotherpassword456'),
-      phone: '0987654321',
-    },
-  });
+  // accounts
+  const [accJohn, accJane] = await Promise.all([
+    prisma.account.upsert({
+      where: { accountNumber: '9000000010' },
+      update: {},
+      create: {
+        accountNumber: '9000000010',
+        userId: john.id,
+        balance: 5000, // Decimal akan tersimpan ke NUMERIC(14,2)
+      },
+    }),
+    prisma.account.upsert({
+      where: { accountNumber: '9000000020' },
+      update: {},
+      create: {
+        accountNumber: '9000000020',
+        userId: jane.id,
+        balance: 3000,
+      },
+    }),
+  ]);
 
-  
-  const account1 = await prisma.account.create({
-    data: {
-      accountNumber: '1234567890',
-      balance: 5000.0,
-      status: 'ACTIVE',
-      userId: user1.id,  // Menggunakan userId, bukan customerId
-    },
+  // transactions
+  await prisma.transaction.createMany({
+    data: [
+      {
+        type: 'DEPOSIT',
+        amount: 1000,
+        toAccountId: accJohn.id,
+        performedById: john.id,
+        description: 'Initial deposit',
+        createdAt: new Date(),
+      },
+      {
+        type: 'TRANSFER',
+        amount: 500,
+        fromAccountId: accJohn.id,
+        toAccountId: accJane.id,
+        performedById: john.id,
+        description: 'Send to Jane',
+        createdAt: new Date(),
+      },
+    ],
   });
-
-  // Membuat rekening untuk user kedua
-  const account2 = await prisma.account.create({
-    data: {
-      accountNumber: '9876543210',
-      balance: 10000.0,
-      status: 'ACTIVE',
-      userId: user2.id,  // Menggunakan userId, bukan customerId
-    },
-  });
-
-  // Membuat transaksi untuk akun pertama (user1)
-  await prisma.transaction.create({
-    data: {
-      type: 'DEPOSIT',
-      amount: 1000.0,
-      transactionDate: new Date(),
-      description: 'Initial deposit',
-      accountId: account1.id,
-    },
-  });
-
-  // Membuat transaksi untuk akun kedua (user2)
-  await prisma.transaction.create({
-    data: {
-      type: 'WITHDRAWAL',
-      amount: 500.0,
-      transactionDate: new Date(),
-      description: 'ATM withdrawal',
-      accountId: account2.id,
-    },
-  });
-
-  console.log('Seeding completed!');
 }
 
 main()
-  .catch((e) => {
-    console.error('Error seeding the database:', e);
-    process.exit(1);
+  .then(async () => {
+    await prisma.$disconnect();
   })
-  .finally(() => {
-    prisma.$disconnect();
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
